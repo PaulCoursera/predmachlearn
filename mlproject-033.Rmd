@@ -1,0 +1,151 @@
+---
+title: "predmachlear-033"
+author: "Paul"
+date: "21 oktober 2015"
+output: html_document
+---
+
+#Introduction
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har
+
+##Assignment
+The goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+##Preprocessing data
+Check if required packages are installed. Install them from CRAN repository when not present.
+```{r eval=FALSE}
+
+if (!require("caret")) 
+{
+  install.packages("caret")
+  require("caret")
+}
+
+if (!require("kernlab")) 
+{
+  install.packages("kernlab")
+  require("kernlab")
+}
+
+if (!require("randomForest")) 
+{
+  install.packages("randomForest")
+  require("randomForest")
+}
+
+if (!require("corrplot")) 
+{
+  install.packages("corrplot")
+  require("corrplot")
+}
+
+if (!require("corrplot")) 
+{
+  install.packages("corrplot")
+  require("corrplot")
+}
+
+if (!require("doParallel")) 
+{
+  install.packages("doParallel")
+  require("doParallel")
+}
+
+```
+
+download datafiles from website
+```{r eval=FALSE}
+## declare file URL and destination file
+fileUrl1 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+destfile1 <- "./data/pml-training.csv"
+fileUrl2 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+destfile2 <- "./data/pml-testing.csv"
+
+## check if a data folder exists if not then create the sukker
+```{r eval=FALSE}
+if (!file.exists("data")) 
+{
+  dir.create("data")
+}
+```
+
+Download the files only once
+```{r eval=FALSE}
+if (!file.exists(destfile1))
+{
+  download.file(fileUrl1, destfile1)
+}
+
+if (!file.exists(destfile2))
+{
+  download.file(fileUrl2, destfile2)
+}
+````
+
+Read the csv file for training and test
+```{r eval=FALSE}
+data_training <- read.csv(destfile1, na.strings= c("NA", "", " "))
+data_test <- read.csv(destfile2, na.strings = c("NA", "", " "))
+```
+
+Clean the data, remov columns with NA's
+```{r eval=FALSE}
+data_training_NAs <- apply(data_training, 2, function(x) { sum(is.na(x)) })
+data_test_NAs <- apply(data_test, 2, function(x) { sum(is.na(x)) })
+
+data_training_clean <- data_training[, which(data_training_NAs == 0)]
+data_test_clean <- data_test[,which(data_test_NAs == 0)]
+```
+
+Remove identifier columns
+```{r eval=FALSE}
+data_training_clean <- data_training_clean[8:length(data_training_clean)]
+data_test_clean <- data_test_clean[8:length(data_test_clean)]
+
+```
+
+
+##Modeling
+```{r eval=FALSE}
+class <- training$classe
+data  <- training[-ncol(training)]
+
+registerDoParallel()
+rfModel <- train(data, class, method = "parRF", tuneGrid = data.frame(mtry = 3), trControl = trainControl(method="none"))
+```
+
+And we evaluate our model results on the test data
+```{r eval=FALSE, echo=FALSE}
+rfPredict <- predict(rfModel, testing)
+confusionMatrix(testing$classe, rfPredict)
+```
+compute the accurancy at test data set 
+```{r eval=FALSE}
+accuracy <- postResample(rfPredict, testing$classe)
+sampleErr <- 1 - as.numeric(confusionMatrix(testing$classe, rfPredict)$overall[1])
+
+print (accuracy)
+print (sampleErr)
+```
+
+Accuracy: 99%, sample error: 0.9%
+
+
+
+#Prediction of classe
+```{r eval=FALSE}
+print (rfPredict)
+```
+
+```{r eval=FALSE}
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i], file=filename, quote=FALSE, row.names=FALSE, col.names=FALSE)
+  }
+}
+pml_write_files(rfPredict)
+````
